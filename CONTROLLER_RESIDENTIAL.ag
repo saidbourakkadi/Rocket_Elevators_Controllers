@@ -1,0 +1,210 @@
+<-------------essentialy-definitions--used------------------------>
+        we just limited here for the essential variable necessary 
+        for moved the elevators dependind the orders and model 
+        controller response batterys[minBat:1, maxBat]
+        battery[i:1, col1,col2,...,ColMax]
+
+        batterie: can be on or off and she has 1 column
+        colomn             : content 2 cages (2 elevators)
+        levelActualCagei   : actual level of cage number 1 or number 2
+        levelAski          : buttons for level floor with direction
+        levelCalli         : buttons in the cage (10 buttonsCall) 
+        directionCagei     : up, down, idle 
+        sensorAlarm        :
+        sensor_weight      : Detects weight load of the current cage
+        sensorDoor         :  Can either be CLEAR or OBSTRUCTED 
+        sensorFire         :    can be on or off or send dangers alert
+        door               : position_X0_Open, position_X150_Closed
+        i   is number      : replace indice or position
+<--------------end --definitions--------------------------------->
+       
+       
+
+<----------WORK MODEL CONTROLLER (CHOICE THE CAGE OF ELEVATORS DEPENDED OF THE CRITERIA----------------------->      
+      
+<SEQUENCE calculated_best_choice_cage >
+
+//WE BASED TO cagei[levelActueli, directionCagei[up,down,idle],levelAski, levelCalli]
+
+// fIRST SCENARIO ) 
+//              if the controller receive order from levelCalli he send it automaticly at a cagei
+//              he will adding in the list up or down sorting and executing with a timing of the list
+
+// SCECOND SCENARIO) 
+                //if the controller receive the order from levelAsk he must be calculated the smallest step
+                // between the levelActueli and levelAski depending the directionCagei and
+                //weigthCagei. no we supposed both cage is actif, sensorAlarm is off
+
+    if the order is from the levelCallCagei
+        Call request_order_cagei with levelActualCagei AND levelAski =null AND levelCalli, AND directionCagei
+    end if
+
+
+    if weigthCage1 is busy OR sensorAlarm is on OR sensorObstruced is on
+        set directionCage1 = idle
+        call open_door untill weigthCage1 is not busy
+    end if
+    if weigthCage2 is busy  OR sensorAlarm is on OR sensorObstruced is on
+        set directionCage2 = idle
+        call open_door untill weigthCage2 is not busy
+    end if
+    
+    
+        
+
+    if the order is from the levelAski and  directionCage1 is up AND directionCage2 is up
+        if (levelAski > levelCage1) AND  (levelAski > levelCage2)
+            set counterStepCage1 = levelAski - levelCage1
+            set counterStepCage2 = levelAski - levelCage2
+            if counterStepCage1 BIGEST OR EQUAL counterStepCage2
+                Call request_order_cagei with levelActualCage1 AND levelAski AND 
+                levelCalli = null, AND directionCage1[up]
+            ELSE 
+                Call request_order_cagei with levelActualCage2 AND levelAski AND 
+                levelCalli = null, AND directionCage2[up]
+        end if
+    ELSE if the order is from the levelAski and  (levelAski = levelCage1) OR  (levelAski = levelCage2)
+        Call open_door
+    else if the order is from the levelAski and  (levelAski > levelCage1) AND  (levelAski < levelCage2)
+        Call request_order_cage1 with levelActualCage1 AND levelAski AND 
+        levelCalli = null, AND directionCage1[up]
+    ELSE if the order is from the levelAski and  (levelAski < levelCage1) AND  (levelAski > levelCage2)
+        Call request_order_cage2 with levelActualCage2 AND levelAski AND levelCalli = null,
+        AND directionCage2[up]
+    end if
+
+<end sequence> 
+
+<--------END WORK MODEL CONTROLLER (CHOICE THE CAGE OF ELEVATORS DEPENDED OF THE CRITERIA----------------------->
+
+
+<----------WORKFLOW INSTRUCTIONS AFTER THE CAGE IS SELECED----------------------->
+<sequence request_order_cagei>
+        READ levelActualCagei, levelAski, levelCalli directionCagei // [1, 7, up], [2,7,up] [3,7,up]
+        
+        if  directionCagei is up  
+            ADD  levelAski INTO listUp[]
+            ADD levelCalli INTO listUp[] 
+            sorting_UP listUp[levelAski] 
+            if listUp[levelAski] DIFFRENT null
+                call moveUp(levelActualCagei, listUp[0], directionCagei)
+            else if listDown[levelAski] DIFFRENT null
+                SET directionCagei = Down
+                call moveDown WITH (levelActualCagei, lisDown[0], directionCagei )
+            else 
+                SET directionCagei = idle
+                
+            end if 
+        else if directionCage = Down 
+            ADD levelAski INTO listDown[]
+            ADD levelCalli INTO listDown[]  
+           
+            sorting_Down listDown[]
+            if listDown[] DIFFRENT null
+                call moveDown WITH (levelActualCagei, lisDown[FIRST], directionCagei )
+            else if listUp[] DIFFRENT null
+                directionCagei = up
+                call moveUp WITH (levelActualCagei, listUp[0], directionCagei)
+            else
+                directionCagei = idle
+                
+            end if 
+        else directionCagei is idle 
+            if levelCallCagei < levelAski
+                set direction to up
+                call  request_order_cagei
+            else if levelCallCagei = levelAski
+                call open_door
+            else
+                set direction to down
+                call  request_order_cagei
+
+        end if
+                
+
+<end SEQUENCE>
+
+<----------END WORKFLOW INSTRUCTIONS AFTER THE CAGE IS SELECED----------------------->
+        
+<------------------------------------MOVE UP  ELEVATOR------------------------------>                
+<sequence moveUp >
+    
+    read (levelActualCagei, listUp[0], directionCagei)
+    if listUp[0] DIFFRENT null
+        SET levelActualCagei = levelActualCagei + 1  //2
+                    
+        if levelActualCagei = listUp[FIRST]
+            Call openDoor 
+                
+            delete listUp[FIRST] // set listUp[0] = null
+            Call request_order with (levelActualCagei, listUp[0] IS null , directionCagei)
+            
+        else
+            Call request_order with (levelActualCagei, listUp[0] IS null , directionCagei)//7,2,up
+        end if 
+        
+    else 
+        directionCagei = down
+        Call request_order with (levelActualCagei , listUp[0] IS null , directionCagei)
+    end if 
+    RETURN levelActueli AND directionCagei
+<end sequence > 
+
+<----------------------------------END--MOVE UP  ELEVATOR------------------------------>
+
+<------------------------------------MOVE DOWN  ELEVATOR------------------------------>
+
+<sequence moveDown >
+    read (levelActualCagei, listDown[0], directionCagei)
+    if listDown[0] != null
+        levelActualCagei = levelActualCagei - 1
+                    
+        if levelActualCagei = listDown[0]
+            Call opendoor() timer 8s
+            Call closeDoor() timer 8s
+            delete listDown[0]
+            Call request_order with (levelActualCagei , listDown[0] = null, directionCagei)
+        else
+            Call request_order with (levelActualCagei , listDown[0] = null, directionCagei)
+        end if 
+    else 
+        directionCagei = idle
+        Call request_order with (levelAsk = null , listDown[0] = null, directionCagei)
+    end if 
+    RETURN levelActueli AND directionCagei
+
+<end sequence >
+
+<---------------------------------END---MOVE DOWN  ELEVATOR------------------------------>
+
+<-----------------------------------  -openDoor  ---------------------------------------->
+
+<sequence openDoor >
+    READ POSITION_DOOR //  INITIALY POSITION_DOOR =150 CLOSED
+    UNTIL POSITION_DOOR EQUAL 0 Do // POSITION_DOOR =0 OPEN
+        SET POSITION_DOOR EQUAL POSITION_DOOR SUBSTRACT 30
+    end UNTIL    
+    CALL closeDoor WITH POSITION_DOOR =0
+<end sequence>
+
+<----------------------------------- END -OPEN DOORS  ---------------------------------------->
+
+<-----------------------------------  -CLOSE DOORS  ---------------------------------------->
+
+<sequence closeDoor >
+    READ POSITION_DOOR // INITIALY POSITION_DOOR = 0 OPEN
+    UNTIL POSITION_DOOR EQUAL 150 Do // POSITION_DOOR = 150 CLOSED
+        SET POSITION_DOOR EQUAL POSITION_DOOR ADD 30
+    end UNTIL   
+
+<end sequence>
+
+<-----------------------------------  -END CLOSE DOORS  ---------------------------------------->
+
+
+
+
+
+
+    
+
