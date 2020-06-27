@@ -89,8 +89,11 @@ class Cage {
         console.log("after tri listDown: " + this.listDown);
     }
     move() {
-        var x;
-        if (this.direction === "up" && this.listUp != null) {
+        if (this.direction === "idle" && this.listUp != null) {
+            this.moveUp(this.listUp);
+        } else if (this.direction === "idle" && this.lisDown != null) {
+            this.moveDown();
+        } else if (this.direction === "up" && this.listUp != null) {
             if (this.levelActual === this.listUp[0]) {
                 this.open_door();
 
@@ -106,8 +109,9 @@ class Cage {
             }
         } else { this.direction = "idle"; }
     } moveUp(e) {
-        if (this.listUp[0] != null) {
+        if (this.listUp[0] != null && (this.levelActual < this.listUp[0])) {
             this.Timer(3000);
+
             this.levelActual = this.levelActual + 1;
             console.log("levelActual is: " + this.levelActual);
             if (this.levelActual === e) {
@@ -168,7 +172,7 @@ class Cage {
             console.log("levelAsk : " + levelAsk + " direction : " + directionAsk + " counterstep : " + counterStepCage);
 
 
-            return counterStepCage, levelAsk, directionAsk;
+            return counterStepCage;
         }
 
         else if (directionAsk === "up" && this.direction === "up") {
@@ -177,14 +181,14 @@ class Cage {
                 counterStepCage = diff * (-1);
                 console.log("levelAsk : " + levelAsk + " direction : " + directionAsk + " counterstep : " + counterStepCage);
 
-                return counterStepCage, levelAsk, directionAsk;
+                return counterStepCage; //, levelAsk, directionAsk;
 
             } else {
                 counterStepCage = (20 - diff);
                 console.log("levelAsk : " + levelAsk + " direction : " + directionAsk + " counterstep : " + counterStepCage);
 
 
-                return counterStepCage, levelAsk, directionAsk;
+                return counterStepCage;//, levelAsk, directionAsk;
             }
 
 
@@ -198,19 +202,19 @@ class Cage {
 
             console.log("levelAsk : " + levelAsk + " direction : " + directionAsk + " counterstep : " + counterStepCage);
 
-            return counterStepCage, levelAsk, directionAsk;
+            return counterStepCage;//, levelAsk, directionAsk;
         } else if (directionAsk == "down" && this.direction == "down") {
             if (levelAsk <= this.levelActual) {
                 counterStepCage = diff;
                 console.log("levelAsk : " + levelAsk + " direction : " + directionAsk + " counterstep : " + counterStepCage);
 
-                return counterStepCage, levelAsk, directionAsk;
+                return counterStepCage;//, levelAsk, directionAsk;
 
             } else {
                 counterStepCage = sum;
                 console.log("levelAsk : " + levelAsk + " direction : " + directionAsk + " counterstep : " + counterStepCage);
 
-                return counterStepCage, levelAsk, directionAsk;
+                return counterStepCage;//, levelAsk, directionAsk;
             }
         }
 
@@ -218,7 +222,7 @@ class Cage {
     }
 
 }
-// choice the bet cage at asking
+// choice the best cage at asking
 
 battery_compute_BestTimingCage = function BestTimingCage(cage_1, cage_2) {
     if (cage_1 <= cage_2) {
@@ -240,31 +244,74 @@ battery_compute_BestTimingCage = function BestTimingCage(cage_1, cage_2) {
 ////////////////////////////////////////////////////////////////
 
 function compute(levelAsk, directionAsk) {
-    console.log("Status Cage1 :");
+
     var cage_1 = cage1.counterStep(levelAsk, directionAsk);
-    console.log("Status Cage2 :");
+    console.log("Step Cage1 :" + cage_1);
     var cage_2 = cage2.counterStep(levelAsk, directionAsk);
-    battery_compute_BestTimingCage(cage_1, cage_2)
-    if (cage1 && directionAsk === "up") {
-        cage1.listUp.push(levelAsk);
+    console.log("Step Cage2 :" + cage_2);
+    battery_compute_BestTimingCage(cage_1, cage_2);
 
-        console.log("listUp cage1 : " + cage1.listUp);
-        this.cage1.move();
-    } else if (cage1 && directionAsk === "down") {
-        cage1.listDown.push(levelAsk);
+    if (cage_1 < cage_2 && directionAsk === "up") {
+        if (cage1.levelActual < levelAsk) {
+            cage1.listUp.push(levelAsk);
+            console.log(cage1.listUp);
+            cage1.move();
+        } else if (cage1.levelActual > levelAsk) {
+            cage1.listDown.push(levelAsk);
+            console.log("lisDown cage1 : " + cage1.listDown);
+            cage1.move();
+        } else {
+            cage1.direction = "idle";
+            cage1.open_door();
+        }
 
-        console.log("listDown cage1 : " + cage1.listDown);
-        this.cage1.move();
-    } else if (cage2 && directionAsk === "up") {
-        cage2.listUp.push(levelAsk);
 
-        console.log("listUp cage2 : " + cage2.listUp);
-        this.cage2.move();
-    } else if (cage2 && directionAsk === "down") {
-        cage2.listDown.push(levelAsk);
 
-        console.log("listDown cage2 : " + cage2.listDown);
-        this.cage2.move();
+
+    } else if (cage_1 < cage_2 && directionAsk === "down") {
+        if (cage1.levelActual < levelAsk) {
+            cage1.listUp.push(levelAsk);
+            console.log(cage1.listUp);
+            cage1.move();
+        } else if (cage1.levelActual > levelAsk) {
+            cage1.listDown.push(levelAsk);
+            console.log("lisDown cage1 : " + cage1.listDown);
+            cage1.move();
+        } else {
+            cage1.direction = "idle";
+            cage1.open_door();
+        }
+        cage1.move();
+    } else if (cage_2 <= cage_1 && directionAsk === "up") {
+        if (cage2.levelActual < levelAsk) {
+            cage2.listUp.push(levelAsk);
+            console.log(cage2.listUp);
+            cage2.move();
+        } else if (cage1.levelActual > levelAsk) {
+            cage2.listDown.push(levelAsk);
+            console.log("lisDown cage1 : " + cage2.listDown);
+            cage2.move();
+        } else {
+            cage2.direction = "idle";
+            cage2.open_door();
+        }
+        cage2.move();
+
+
+    } else if (cage_2 <= cage_1 && directionAsk === "down") {
+        if (cage2.levelActual < levelAsk) {
+            cage2.listUp.push(levelAsk);
+            console.log(cage2.listUp);
+            cage2.move();
+        } else if (cage1.levelActual > levelAsk) {
+            cage2.listDown.push(levelAsk);
+            console.log("lisDown cage1 : " + cage2.listDown);
+            cage2.move();
+        } else {
+            cage2.direction = "idle";
+            cage2.open_door();
+        }
+
     }
 
 
@@ -275,13 +322,15 @@ function compute(levelAsk, directionAsk) {
 // constructor(id,column,battery,levelActual,direction) 
 // initialised cages //
 /////////////////////////////////////////    
-cage1 = new Cage("cage1", 1, 1, 5, "up");
-cage2 = new Cage("cage2", 1, 1, 2, "up");
+cage1 = new Cage("cage1", 1, 1, 8, "idle");
+cage2 = new Cage("cage2", 1, 1, 1, "idle");
 ///////////////////////////////////////////
 
 //call inside the elevator
 //1er scenario : 
+
 // cage1.Call_level(5);
+// cage2.Call_level(2);
 
 // cage1.Call_level(3);
 // cage1.Call_level(7);
@@ -290,9 +339,9 @@ cage2 = new Cage("cage2", 1, 1, 2, "up");
 
 //call outside the elevator
 //compute(levelAsk, direction)
-compute(7, "up");
+compute(6, "down");
 
-
+compute(8, "up");
 
 
 
